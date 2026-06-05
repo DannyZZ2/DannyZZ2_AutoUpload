@@ -118,6 +118,10 @@ export class XiaohongshuAdapter extends BaseWebAdapter {
     }
   }
 
+  async setContentDeclaration(_context: PublishContext) {
+    // 小红书当前不处理内容声明，避免基础 adapter 执行通用声明流程。
+  }
+
   async submitPublish({ page, step }: PublishContext) {
     await step("提交小红书立即发布");
     const result = await this.clickXhsBottomPublishButton(page);

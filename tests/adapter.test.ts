@@ -129,6 +129,20 @@ describe("publisher adapters", () => {
     expect(calls).not.toContain("fill:小红书标题\n#城市生活 #探店");
   });
 
+  it("skips Xiaohongshu content declaration", async () => {
+    const calls: string[] = [];
+    const adapter = new XiaohongshuAdapter();
+    await adapter.setContentDeclaration({
+      task: sampleTask(),
+      page: fakePage(calls),
+      step: async (step) => {
+        calls.push(`step:${step}`);
+      }
+    });
+
+    expect(calls).toEqual([]);
+  });
+
   it("clicks the bottom Xiaohongshu publish button instead of the first publish text", async () => {
     const calls: string[] = [];
     const adapter = new XiaohongshuAdapter();
