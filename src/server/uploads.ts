@@ -55,7 +55,7 @@ export function requireSavedUploads(saved: SavedUploads, options: { requireCover
     throw new Error("必须上传 4:3 封面");
   }
   if (options.requireCover169 && !saved.cover169Path) {
-    throw new Error("发布微博必须上传 16:9 封面");
+    throw new Error("发布微博或 B站必须上传 16:9 封面");
   }
   return {
     videoPath: saved.videoPath,

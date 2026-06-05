@@ -3,7 +3,8 @@ import { getCoverSelection } from "../src/server/publisher/coverMapping";
 
 const covers = {
   cover34Path: "/tmp/cover-34.png",
-  cover43Path: "/tmp/cover-43.png"
+  cover43Path: "/tmp/cover-43.png",
+  cover169Path: "/tmp/cover-169.png"
 };
 
 describe("cover mapping", () => {
@@ -27,9 +28,10 @@ describe("cover mapping", () => {
     });
   });
 
-  it("uses 4:3 covers for Bilibili", () => {
+  it("uses 4:3 and 16:9 covers for Bilibili", () => {
     expect(getCoverSelection("bilibili", covers)).toEqual({
-      cover43: covers.cover43Path
+      cover43: covers.cover43Path,
+      cover169: covers.cover169Path
     });
   });
 
@@ -40,7 +42,10 @@ describe("cover mapping", () => {
   });
 
   it("does not use vertical or 4:3 covers for Weibo", () => {
-    expect(getCoverSelection("weibo", covers)).toEqual({
+    expect(getCoverSelection("weibo", {
+      cover34Path: covers.cover34Path,
+      cover43Path: covers.cover43Path
+    })).toEqual({
       cover169: undefined
     });
   });

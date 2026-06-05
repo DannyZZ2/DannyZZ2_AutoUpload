@@ -238,7 +238,8 @@ export class XiaohongshuAdapter extends BaseWebAdapter {
             "z-index:2147483647",
             "pointer-events:none"
           ].join(";");
-          document.body.append(markerElement, labelElement);
+          void markerElement;
+          void labelElement;
         },
         click(element: HTMLElement): XhsClickResult {
           element.scrollIntoView({ block: "center", inline: "center" });
@@ -485,7 +486,8 @@ export class XiaohongshuAdapter extends BaseWebAdapter {
             "z-index:2147483647",
             "pointer-events:none"
           ].join(";");
-          document.body.append(markerElement, labelElement);
+          void markerElement;
+          void labelElement;
         },
         click(element: HTMLElement): XhsClickResult {
           const rect = element.getBoundingClientRect();
@@ -648,7 +650,8 @@ export class XiaohongshuAdapter extends BaseWebAdapter {
             "z-index:2147483647",
             "pointer-events:none"
           ].join(";");
-          document.body.append(markerElement, labelElement);
+          void markerElement;
+          void labelElement;
         }
       };
       const candidates = Array.from(document.querySelectorAll<HTMLElement>("body *"))
@@ -802,7 +805,8 @@ export class XiaohongshuAdapter extends BaseWebAdapter {
             "z-index:2147483647",
             "pointer-events:none"
           ].join(";");
-          document.body.append(markerElement, labelElement);
+          void markerElement;
+          void labelElement;
         }
       };
       const allUploadTextElements = Array.from(document.querySelectorAll<HTMLElement>("button, [role='button'], label, a, span, div"))
@@ -1019,7 +1023,8 @@ export class XiaohongshuAdapter extends BaseWebAdapter {
             "z-index:2147483647",
             "pointer-events:none"
           ].join(";");
-          document.body.append(markerElement, labelElement);
+          void markerElement;
+          void labelElement;
         }
       };
       const candidates = Array.from(document.querySelectorAll<HTMLElement>("button, [role='button'], body *"))
@@ -1222,7 +1227,8 @@ export class XiaohongshuAdapter extends BaseWebAdapter {
             "z-index:2147483647",
             "pointer-events:none"
           ].join(";");
-          document.body.append(markerElement, labelElement);
+          void markerElement;
+          void labelElement;
         }
       };
 

@@ -10,7 +10,7 @@ export const platformConfigs: Record<Platform, PlatformConfig> = {
   bilibili: {
     id: "bilibili",
     name: "B站",
-    coverMode: "4:3",
+    coverMode: "4:3 + 16:9",
     publisherUrl: "https://member.bilibili.com/platform/upload/video/frame"
   },
   xiaohongshu: {

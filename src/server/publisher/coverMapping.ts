@@ -33,6 +33,13 @@ export function getCoverSelection(platform: Platform, input: { cover34Path: stri
     } satisfies CoverSelection;
   }
 
+  if (platform === "bilibili") {
+    return {
+      cover43: input.cover43Path,
+      cover169: input.cover169Path
+    } satisfies CoverSelection;
+  }
+
   return {
     cover43: input.cover43Path
   } satisfies CoverSelection;

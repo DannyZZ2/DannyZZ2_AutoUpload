@@ -49,7 +49,7 @@ export type PlatformRun = {
 export type PlatformConfig = {
   id: Platform;
   name: string;
-  coverMode: "both" | "3:4" | "4:3" | "16:9";
+  coverMode: "both" | "3:4" | "4:3" | "16:9" | "4:3 + 16:9";
   publisherUrl: string;
 };
 

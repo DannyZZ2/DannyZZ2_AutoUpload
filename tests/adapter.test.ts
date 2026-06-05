@@ -192,7 +192,7 @@ describe("publisher adapters", () => {
     expect(calls.indexOf("eval:xhs-cover-confirm-click")).toBeLessThan(calls.indexOf("eval:xhs-cover-effect-pass-state"));
   });
 
-  it("sets only the 4:3 cover for bilibili", async () => {
+  it("uploads 4:3 and 16:9 covers for Bilibili", async () => {
     const calls: string[] = [];
     const adapter = new BilibiliAdapter();
     await adapter.setCover({
@@ -203,8 +203,18 @@ describe("publisher adapters", () => {
       }
     });
 
+    expect(calls).toContain("eval:bilibili-cover-setting-click");
+    expect(calls).toContain("eval:bilibili-cover-editor-visible");
+    expect(calls).toContain("eval:bilibili-cover-upload-click:4:3");
     expect(calls).toContain("chooser-file:/tmp/cover43.png");
-    expect(calls).not.toContain("chooser-file:/tmp/cover34.png");
+    expect(calls).toContain("eval:bilibili-cover-ratio-click:16:9");
+    expect(calls).toContain("eval:bilibili-cover-upload-click:16:9");
+    expect(calls).toContain("chooser-file:/tmp/cover169.png");
+    expect(calls).toContain("eval:bilibili-cover-done-click");
+    expect(calls.indexOf("eval:bilibili-cover-setting-click")).toBeLessThan(calls.indexOf("eval:bilibili-cover-upload-click:4:3"));
+    expect(calls.indexOf("chooser-file:/tmp/cover43.png")).toBeLessThan(calls.indexOf("eval:bilibili-cover-ratio-click:16:9"));
+    expect(calls.indexOf("eval:bilibili-cover-ratio-click:16:9")).toBeLessThan(calls.indexOf("chooser-file:/tmp/cover169.png"));
+    expect(calls.indexOf("chooser-file:/tmp/cover169.png")).toBeLessThan(calls.indexOf("eval:bilibili-cover-done-click"));
   });
 
   it("runs WeChat Channels cover selection immediately after video upload", async () => {
@@ -886,6 +896,56 @@ function fakePageInstance(
           passed: confirmed,
           failed: false,
           text: confirmed ? "封面效果评估通过，未发现封面质量问题" : ""
+        };
+      }
+      if (String(fn).includes("bilibili-cover-setting-click")) {
+        calls.push("eval:bilibili-cover-setting-click");
+        return {
+          clicked: true,
+          point: { x: 260, y: 470 },
+          targetText: "封面设置",
+          targetTagName: "DIV"
+        };
+      }
+      if (String(fn).includes("bilibili-cover-editor-visible")) {
+        calls.push("eval:bilibili-cover-editor-visible");
+        return calls.includes("eval:bilibili-cover-setting-click");
+      }
+      if (String(fn).includes("bilibili-cover-upload-click")) {
+        const ratio = typeof arg === "string"
+          ? arg
+          : String(fn).includes('targetRatio = "16:9"')
+            ? "16:9"
+            : "4:3";
+        calls.push(`eval:bilibili-cover-upload-click:${ratio}`);
+        return {
+          clicked: true,
+          point: ratio === "16:9" ? { x: 540, y: 760 } : { x: 520, y: 1120 },
+          targetText: "上传封面",
+          targetTagName: "BUTTON"
+        };
+      }
+      if (String(fn).includes("bilibili-cover-ratio-click")) {
+        const ratio = typeof arg === "string"
+          ? arg
+          : String(fn).includes('targetRatio = "16:9"')
+            ? "16:9"
+            : "unknown";
+        calls.push(`eval:bilibili-cover-ratio-click:${ratio}`);
+        return {
+          clicked: true,
+          point: { x: 460, y: 480 },
+          targetText: "个人空间封面（16:9）",
+          targetTagName: "BUTTON"
+        };
+      }
+      if (String(fn).includes("bilibili-cover-done-click")) {
+        calls.push("eval:bilibili-cover-done-click");
+        return {
+          clicked: true,
+          point: { x: 1180, y: 1120 },
+          targetText: "完成",
+          targetTagName: "BUTTON"
         };
       }
       if (String(fn).includes("douyin-cover-card-click")) {

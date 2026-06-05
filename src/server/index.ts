@@ -82,7 +82,7 @@ app.post("/api/tasks", async (request, reply) => {
 
     const parsed = parseTaskFields(fields);
     const uploads = requireSavedUploads(saved, {
-      requireCover169: parsed.platforms.includes("weibo")
+      requireCover169: parsed.platforms.includes("weibo") || parsed.platforms.includes("bilibili")
     });
     validateVideoFile(uploads.videoPath);
     if (parsed.platforms.includes("weibo")) {

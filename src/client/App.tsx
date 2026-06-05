@@ -155,8 +155,8 @@ export function App() {
                 <input name="cover43" type="file" accept="image/png,image/jpeg" required />
               </label>
               <label className="field">
-                <span>16:9 微博封面</span>
-                <input name="cover169" type="file" accept="image/png,image/jpeg" required={selectedPlatforms.includes("weibo")} />
+                <span>16:9 封面（微博/B站）</span>
+                <input name="cover169" type="file" accept="image/png,image/jpeg" required={selectedPlatforms.includes("weibo") || selectedPlatforms.includes("bilibili")} />
               </label>
             </div>
 
