@@ -118,6 +118,21 @@ export class XiaohongshuAdapter extends BaseWebAdapter {
     }
   }
 
+  async submitPublish({ page, step }: PublishContext) {
+    await step("提交小红书立即发布");
+    const result = await this.clickXhsBottomPublishButton(page);
+    await this.logXhsCoverClick({
+      phase: "bottom-publish-click",
+      ...result
+    });
+
+    if (!result.clicked) {
+      throw new Error(`未找到小红书底部发布按钮${result.reason ? `：${result.reason}` : ""}`);
+    }
+
+    await this.waitForPublishSubmitted(page);
+  }
+
   private async openXhsCoverEditor(page: Page) {
     for (let attempt = 0; attempt < 3; attempt += 1) {
       const clickResult = await this.clickXhsCoverPreview(page);
@@ -1110,6 +1125,207 @@ export class XiaohongshuAdapter extends BaseWebAdapter {
     }
 
     return false;
+  }
+
+  private async clickXhsBottomPublishButton(page: Page) {
+    await page.evaluate(() => {
+      const marker = "xhs-publish-page-scroll-bottom";
+      void marker;
+      window.scrollTo(0, document.documentElement.scrollHeight);
+      for (const element of Array.from(document.querySelectorAll<HTMLElement>("body *"))) {
+        if (element.scrollHeight > element.clientHeight + 20) {
+          element.scrollTop = element.scrollHeight;
+        }
+      }
+    }).catch(() => undefined);
+    await page.waitForTimeout(300);
+
+    const result = await page.evaluate<XhsClickResult | boolean>(() => {
+      const marker = "xhs-bottom-publish-click";
+      void marker;
+      const helper = {
+        textOf(element: HTMLElement) {
+          return (element.textContent || "").replace(/\s+/g, " ").trim();
+        },
+        compactTextOf(element: HTMLElement) {
+          return (element.textContent || "").replace(/\s+/g, "").trim();
+        },
+        toRect(element: HTMLElement) {
+          const rect = element.getBoundingClientRect();
+          return {
+            left: rect.left,
+            top: rect.top,
+            width: rect.width,
+            height: rect.height,
+            right: rect.right,
+            bottom: rect.bottom
+          };
+        },
+        classNameOf(element: HTMLElement) {
+          return typeof element.className === "string" ? element.className.slice(0, 160) : undefined;
+        },
+        isVisible(element: HTMLElement) {
+          const rect = element.getBoundingClientRect();
+          const style = window.getComputedStyle(element);
+          return (
+            rect.width > 0 &&
+            rect.height > 0 &&
+            rect.right > 0 &&
+            rect.bottom > 0 &&
+            rect.left < window.innerWidth &&
+            rect.top < window.innerHeight &&
+            style.display !== "none" &&
+            style.visibility !== "hidden" &&
+            style.opacity !== "0" &&
+            style.pointerEvents !== "none"
+          );
+        },
+        isDisabled(element: HTMLElement) {
+          const disabled = element.closest("[disabled], [aria-disabled='true'], .disabled, [class*='disabled']");
+          return Boolean(disabled);
+        },
+        markClick(point: { x: number; y: number }, label: string) {
+          const markerElement = document.createElement("div");
+          markerElement.dataset.publisherClickMarker = label;
+          markerElement.style.cssText = [
+            "position:fixed",
+            `left:${point.x - 8}px`,
+            `top:${point.y - 8}px`,
+            "width:16px",
+            "height:16px",
+            "border:3px solid #ff2442",
+            "border-radius:50%",
+            "background:rgba(255,36,66,.2)",
+            "z-index:2147483647",
+            "pointer-events:none"
+          ].join(";");
+          const labelElement = document.createElement("div");
+          labelElement.textContent = label;
+          labelElement.style.cssText = [
+            "position:fixed",
+            `left:${point.x + 12}px`,
+            `top:${point.y - 12}px`,
+            "padding:2px 6px",
+            "border-radius:4px",
+            "background:#ff2442",
+            "color:#fff",
+            "font:12px/1.4 sans-serif",
+            "z-index:2147483647",
+            "pointer-events:none"
+          ].join(";");
+          document.body.append(markerElement, labelElement);
+        }
+      };
+
+      const allPublishElements = Array.from(document.querySelectorAll<HTMLElement>("button, [role='button'], a, span, div"))
+        .filter((element) => helper.isVisible(element))
+        .map((element) => {
+          const explicitControl = element.closest<HTMLElement>("button, [role='button']");
+          const explicitText = explicitControl ? helper.compactTextOf(explicitControl) : "";
+          const explicitRect = explicitControl?.getBoundingClientRect();
+          const useExplicitControl =
+            explicitControl &&
+            explicitRect &&
+            explicitText === "发布" &&
+            explicitRect.width >= 90 &&
+            explicitRect.width <= 320 &&
+            explicitRect.height >= 36 &&
+            explicitRect.height <= 100;
+          const target = useExplicitControl ? explicitControl : element;
+          return {
+            element: target,
+            rect: target.getBoundingClientRect(),
+            text: helper.textOf(target) || helper.textOf(element),
+            compactText: helper.compactTextOf(target) || helper.compactTextOf(element)
+          };
+        })
+        .filter(({ compactText }) => compactText === "发布");
+
+      const candidates = allPublishElements
+        .filter(({ element, rect }) => (
+          !helper.isDisabled(element) &&
+          rect.width >= 90 &&
+          rect.width <= 320 &&
+          rect.height >= 36 &&
+          rect.height <= 100 &&
+          rect.top >= window.innerHeight * 0.55 &&
+          rect.bottom <= window.innerHeight + 4
+        ))
+        .sort((a, b) => {
+          const score = (item: typeof a) => {
+            const style = window.getComputedStyle(item.element);
+            const isButton = item.element.tagName === "BUTTON" || item.element.getAttribute("role") === "button";
+            const pinkLike = style.backgroundColor.includes("255") || style.color.includes("255");
+            return (
+              (isButton ? 50 : 0) +
+              (pinkLike ? 20 : 0) +
+              item.rect.bottom / 100 +
+              item.rect.width / 1000
+            );
+          };
+          return score(b) - score(a);
+        });
+      const target = candidates[0]?.element;
+      if (!target) {
+        return {
+          clicked: false,
+          reason: "bottom-publish-button-not-found",
+          candidates: allPublishElements.slice(0, 12).map((item) => ({
+            text: item.text.slice(0, 120),
+            tagName: item.element.tagName,
+            rect: {
+              left: item.rect.left,
+              top: item.rect.top,
+              width: item.rect.width,
+              height: item.rect.height,
+              right: item.rect.right,
+              bottom: item.rect.bottom
+            }
+          }))
+        };
+      }
+
+      target.scrollIntoView({ block: "nearest", inline: "center" });
+      const rect = target.getBoundingClientRect();
+      const point = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+      const hit = document.elementFromPoint(point.x, point.y) as HTMLElement | null;
+      helper.markClick(point, "xhs-bottom-publish");
+      return {
+        clicked: true,
+        point,
+        targetText: helper.textOf(target).slice(0, 120),
+        targetTagName: target.tagName,
+        targetClassName: helper.classNameOf(target),
+        targetRect: helper.toRect(target),
+        hitText: (hit ? helper.textOf(hit) : "").slice(0, 120),
+        hitTagName: hit?.tagName,
+        hitClassName: hit ? helper.classNameOf(hit) : undefined,
+        hitRect: hit ? helper.toRect(hit) : undefined,
+        candidates: candidates.slice(0, 8).map((item) => ({
+          text: item.text.slice(0, 120),
+          tagName: item.element.tagName,
+          rect: {
+            left: item.rect.left,
+            top: item.rect.top,
+            width: item.rect.width,
+            height: item.rect.height,
+            right: item.rect.right,
+            bottom: item.rect.bottom
+          }
+        }))
+      };
+    }).catch((error): XhsClickResult => ({
+      clicked: false,
+      reason: error instanceof Error ? error.message : String(error)
+    }));
+
+    const clickResult = this.normalizeXhsClickResult(result, "bottom-publish-click");
+    if (clickResult.clicked && clickResult.point) {
+      await page.mouse.move(Math.round(clickResult.point.x), Math.round(clickResult.point.y));
+      await page.mouse.click(Math.round(clickResult.point.x), Math.round(clickResult.point.y));
+    }
+
+    return clickResult;
   }
 
   private normalizeXhsClickResult(result: XhsClickResult | boolean | unknown, phase: string): XhsClickResult {

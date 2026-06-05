@@ -129,6 +129,25 @@ describe("publisher adapters", () => {
     expect(calls).not.toContain("fill:小红书标题\n#城市生活 #探店");
   });
 
+  it("clicks the bottom Xiaohongshu publish button instead of the first publish text", async () => {
+    const calls: string[] = [];
+    const adapter = new XiaohongshuAdapter();
+    await adapter.submitPublish({
+      task: sampleTask(),
+      page: fakePage(calls),
+      step: async (step) => {
+        calls.push(`step:${step}`);
+      }
+    });
+
+    expect(calls).toContain("eval:xhs-publish-page-scroll-bottom");
+    expect(calls).toContain("eval:xhs-bottom-publish-click");
+    expect(calls).toContain("mouse-click:840:760");
+    expect(calls).toContain("eval:publish-submit-state");
+    expect(calls).not.toContain("click:text:发布");
+    expect(calls.indexOf("eval:xhs-bottom-publish-click")).toBeLessThan(calls.indexOf("eval:publish-submit-state"));
+  });
+
   it("uploads Xiaohongshu 3:4 cover through the cover editor", async () => {
     const calls: string[] = [];
     const adapter = new XiaohongshuAdapter();
@@ -765,6 +784,22 @@ function fakePageInstance(
               rect: { left: 380, top: 1158, width: 140, height: 44, right: 520, bottom: 1202 }
             }
           ]
+        };
+      }
+      if (String(fn).includes("xhs-publish-page-scroll-bottom")) {
+        calls.push("eval:xhs-publish-page-scroll-bottom");
+        return true;
+      }
+      if (String(fn).includes("xhs-bottom-publish-click")) {
+        calls.push("eval:xhs-bottom-publish-click");
+        return {
+          clicked: true,
+          point: { x: 840, y: 760 },
+          targetText: "发布",
+          targetTagName: "BUTTON",
+          targetRect: { left: 720, top: 724, width: 240, height: 72, right: 960, bottom: 796 },
+          hitText: "发布",
+          hitTagName: "BUTTON"
         };
       }
       if (String(fn).includes("publish-submit-state")) {
