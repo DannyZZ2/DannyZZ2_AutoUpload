@@ -143,7 +143,7 @@ describe("publisher adapters", () => {
     expect(calls).toEqual([]);
   });
 
-  it("clicks the bottom Xiaohongshu publish button instead of the first publish text", async () => {
+  it("clicks the fixed Xiaohongshu footer publish button instead of the first publish text", async () => {
     const calls: string[] = [];
     const adapter = new XiaohongshuAdapter();
     await adapter.submitPublish({
@@ -154,10 +154,10 @@ describe("publisher adapters", () => {
       }
     });
 
-    expect(calls).toContain("eval:xhs-publish-page-scroll-bottom");
     expect(calls).toContain("eval:xhs-bottom-publish-click");
     expect(calls).toContain("mouse-click:840:760");
     expect(calls).toContain("eval:publish-submit-state");
+    expect(calls).not.toContain("eval:xhs-publish-page-scroll-bottom");
     expect(calls).not.toContain("click:text:发布");
     expect(calls.indexOf("eval:xhs-bottom-publish-click")).toBeLessThan(calls.indexOf("eval:publish-submit-state"));
   });

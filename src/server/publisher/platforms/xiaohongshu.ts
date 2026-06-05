@@ -1132,18 +1132,6 @@ export class XiaohongshuAdapter extends BaseWebAdapter {
   }
 
   private async clickXhsBottomPublishButton(page: Page) {
-    await page.evaluate(() => {
-      const marker = "xhs-publish-page-scroll-bottom";
-      void marker;
-      window.scrollTo(0, document.documentElement.scrollHeight);
-      for (const element of Array.from(document.querySelectorAll<HTMLElement>("body *"))) {
-        if (element.scrollHeight > element.clientHeight + 20) {
-          element.scrollTop = element.scrollHeight;
-        }
-      }
-    }).catch(() => undefined);
-    await page.waitForTimeout(300);
-
     const result = await page.evaluate<XhsClickResult | boolean>(() => {
       const marker = "xhs-bottom-publish-click";
       void marker;
@@ -1224,7 +1212,7 @@ export class XiaohongshuAdapter extends BaseWebAdapter {
       const allPublishElements = Array.from(document.querySelectorAll<HTMLElement>("button, [role='button'], a, span, div"))
         .filter((element) => helper.isVisible(element))
         .map((element) => {
-          const explicitControl = element.closest<HTMLElement>("button, [role='button']");
+          const explicitControl = element.closest<HTMLElement>("button, [role='button'], a");
           const explicitText = explicitControl ? helper.compactTextOf(explicitControl) : "";
           const explicitRect = explicitControl?.getBoundingClientRect();
           const useExplicitControl =
@@ -1235,35 +1223,77 @@ export class XiaohongshuAdapter extends BaseWebAdapter {
             explicitRect.width <= 320 &&
             explicitRect.height >= 36 &&
             explicitRect.height <= 100;
-          const target = useExplicitControl ? explicitControl : element;
+          const compactText = helper.compactTextOf(element);
+          let target = useExplicitControl ? explicitControl : element;
+          if (!useExplicitControl && compactText === "发布") {
+            for (const parent of Array.from(element.parentElement ? [element.parentElement, element.parentElement.parentElement, element.parentElement.parentElement?.parentElement] : [])) {
+              if (!parent) {
+                continue;
+              }
+              const parentRect = parent.getBoundingClientRect();
+              const parentText = helper.compactTextOf(parent);
+              if (
+                parentText === "发布" &&
+                parentRect.width >= 90 &&
+                parentRect.width <= 360 &&
+                parentRect.height >= 36 &&
+                parentRect.height <= 120
+              ) {
+                target = parent;
+                break;
+              }
+            }
+          }
+          const rect = target.getBoundingClientRect();
+          const hasFixedOrStickyAncestor = (() => {
+            let current: HTMLElement | null = target;
+            while (current && current !== document.body) {
+              const position = window.getComputedStyle(current).position;
+              if (position === "fixed" || position === "sticky") {
+                return true;
+              }
+              current = current.parentElement;
+            }
+            return false;
+          })();
           return {
             element: target,
-            rect: target.getBoundingClientRect(),
+            rect,
             text: helper.textOf(target) || helper.textOf(element),
-            compactText: helper.compactTextOf(target) || helper.compactTextOf(element)
+            compactText: helper.compactTextOf(target) || helper.compactTextOf(element),
+            hasFixedOrStickyAncestor
           };
         })
         .filter(({ compactText }) => compactText === "发布");
 
       const candidates = allPublishElements
-        .filter(({ element, rect }) => (
-          !helper.isDisabled(element) &&
-          rect.width >= 90 &&
-          rect.width <= 320 &&
-          rect.height >= 36 &&
-          rect.height <= 100 &&
-          rect.top >= window.innerHeight * 0.55 &&
-          rect.bottom <= window.innerHeight + 4
-        ))
+        .filter(({ element, rect }) => {
+          const centerX = rect.left + rect.width / 2;
+          return (
+            !helper.isDisabled(element) &&
+            rect.width >= 90 &&
+            rect.width <= 360 &&
+            rect.height >= 36 &&
+            rect.height <= 120 &&
+            rect.top >= window.innerHeight - 180 &&
+            rect.bottom <= window.innerHeight + 12 &&
+            Math.abs(centerX - window.innerWidth / 2) <= window.innerWidth * 0.35
+          );
+        })
         .sort((a, b) => {
           const score = (item: typeof a) => {
             const style = window.getComputedStyle(item.element);
             const isButton = item.element.tagName === "BUTTON" || item.element.getAttribute("role") === "button";
-            const pinkLike = style.backgroundColor.includes("255") || style.color.includes("255");
+            const pinkLike = style.backgroundColor.includes("255") || style.backgroundColor.includes("36") || style.color.includes("255");
+            const centerX = item.rect.left + item.rect.width / 2;
+            const centerDistance = Math.abs(centerX - window.innerWidth / 2);
+            const bottomDistance = Math.abs(window.innerHeight - item.rect.bottom);
             return (
+              (item.hasFixedOrStickyAncestor ? 100 : 0) +
               (isButton ? 50 : 0) +
               (pinkLike ? 20 : 0) +
-              item.rect.bottom / 100 +
+              Math.max(0, 40 - bottomDistance) +
+              Math.max(0, 40 - centerDistance / 10) +
               item.rect.width / 1000
             );
           };
@@ -1289,7 +1319,6 @@ export class XiaohongshuAdapter extends BaseWebAdapter {
         };
       }
 
-      target.scrollIntoView({ block: "nearest", inline: "center" });
       const rect = target.getBoundingClientRect();
       const point = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
       const hit = document.elementFromPoint(point.x, point.y) as HTMLElement | null;
