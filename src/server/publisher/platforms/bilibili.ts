@@ -4,6 +4,7 @@ import type { Page } from "playwright";
 import { dataDir } from "../../config";
 import type { PublishContext } from "../adapter";
 import { BaseWebAdapter } from "../baseWebAdapter";
+import { formatTags } from "../format";
 
 type RectSnapshot = {
   left: number;
@@ -57,6 +58,19 @@ export class BilibiliAdapter extends BaseWebAdapter {
     submitImmediateTexts: ["立即投稿", "投稿", "发布"]
   };
 
+  async setTitleAndTags({ task, page, step }: PublishContext) {
+    await step("填写 B站标题和简介");
+    await this.fillFirst(page, this.profile.titleInputs, task.title, "未找到 B站标题输入框");
+
+    const tagText = formatTags(task.tags);
+    if (tagText) {
+      await this.tryFillFirst(page, this.profile.descriptionInputs, `${task.title}\n${tagText}`);
+    }
+
+    await step("填写 B站标签");
+    await this.fillBilibiliTags(page, task.tags);
+  }
+
   async setCover({ task, page, step }: PublishContext) {
     await step("打开 B站封面制作页");
     const openResult = await this.clickBilibiliCoverSetting(page);
@@ -106,6 +120,124 @@ export class BilibiliAdapter extends BaseWebAdapter {
     if (!doneResult.clicked) {
       throw new Error(`B站封面上传后未找到完成按钮${doneResult.reason ? `：${doneResult.reason}` : ""}`);
     }
+  }
+
+  private async fillBilibiliTags(page: Page, tags: string[]) {
+    const normalizedTags = tags
+      .map((tag) => tag.replace(/^#/, "").trim())
+      .filter(Boolean);
+    if (normalizedTags.length === 0) {
+      return;
+    }
+
+    await this.clearBilibiliTagInput(page);
+
+    const selectedByRecommendation = await this.clickBilibiliRecommendedTags(page, normalizedTags);
+    const missingTags = normalizedTags.filter((tag) => !selectedByRecommendation.includes(tag));
+
+    if (missingTags.length === 0) {
+      return;
+    }
+
+    await this.typeMissingBilibiliTags(page, missingTags);
+  }
+
+  private async clearBilibiliTagInput(page: Page) {
+    for (const selector of this.profile.tagInputs) {
+      const input = page.locator(selector).first();
+      try {
+        await input.click({ timeout: 2_000 });
+        await input.fill("", { timeout: 2_000 });
+        for (let index = 0; index < 10; index += 1) {
+          await page.keyboard.press("Backspace");
+        }
+        return true;
+      } catch {
+        // Try the next tag input.
+      }
+    }
+
+    return false;
+  }
+
+  private async clickBilibiliRecommendedTags(page: Page, tags: string[]) {
+    const selected: string[] = [];
+
+    for (const tag of tags) {
+      const result = await page.evaluate<{ clicked: boolean; tag: string }>(`
+      (() => {
+        const marker = "bilibili-recommended-tag-click";
+        void marker;
+        const targetTag = ${JSON.stringify(tag)};
+        const createBilibiliClickHelper = ${createBilibiliClickHelper.toString()};
+        const helper = createBilibiliClickHelper();
+        const normalizeTag = (value) => helper.textOf(value).replace(/^#/, "").trim();
+        const candidates = helper.allElements()
+          .filter((element) => helper.isVisible(element))
+          .map((element) => ({
+            element,
+            rect: element.getBoundingClientRect(),
+            text: helper.textOf(element),
+            normalized: normalizeTag(element),
+            tagName: element.tagName
+          }))
+          .filter((candidate) => {
+            const area = candidate.rect.width * candidate.rect.height;
+            return (
+              candidate.normalized === targetTag &&
+              candidate.text.length <= targetTag.length + 4 &&
+              candidate.rect.width >= 20 &&
+              candidate.rect.height >= 16 &&
+              candidate.rect.width <= 260 &&
+              candidate.rect.height <= 80 &&
+              area <= 16_000 &&
+              !["HTML", "BODY", "MICRO-APP", "MICRO-APP-BODY"].includes(candidate.tagName)
+            );
+          })
+          .sort((a, b) => {
+            const aButton = a.tagName === "BUTTON" || a.element.getAttribute("role") === "button" ? 0 : 1;
+            const bButton = b.tagName === "BUTTON" || b.element.getAttribute("role") === "button" ? 0 : 1;
+            const aArea = a.rect.width * a.rect.height;
+            const bArea = b.rect.width * b.rect.height;
+            return aButton - bButton || aArea - bArea;
+          });
+
+        const candidate = candidates[0];
+        if (!candidate) {
+          return { clicked: false, tag: targetTag };
+        }
+
+        helper.clickAt(candidate.element, "bilibili-recommended-tag-" + targetTag);
+        return { clicked: true, tag: targetTag };
+      })()
+      `);
+
+      if (result.clicked) {
+        selected.push(result.tag);
+        await page.waitForTimeout(200);
+      }
+    }
+
+    return selected;
+  }
+
+  private async typeMissingBilibiliTags(page: Page, tags: string[]) {
+    for (const selector of this.profile.tagInputs) {
+      const input = page.locator(selector).first();
+      try {
+        await input.click({ timeout: 2_000 });
+        for (const tag of tags) {
+          await page.keyboard.insertText(tag);
+          await page.keyboard.press("Space");
+          await page.waitForTimeout(200);
+        }
+        return true;
+      } catch {
+        // Try the next tag input.
+      }
+    }
+
+    throw new Error("未能填写 B站标签");
   }
 
   private async uploadBilibiliCover(page: Page, filePath: string, ratio: "4:3" | "16:9") {

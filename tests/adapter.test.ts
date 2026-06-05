@@ -217,6 +217,35 @@ describe("publisher adapters", () => {
     expect(calls.indexOf("chooser-file:/tmp/cover169.png")).toBeLessThan(calls.indexOf("eval:bilibili-cover-done-click"));
   });
 
+  it("selects Bilibili recommended tags before typing missing tags", async () => {
+    const calls: string[] = [];
+    const adapter = new BilibiliAdapter();
+    await adapter.setTitleAndTags({
+      task: {
+        ...sampleTask(),
+        title: "B站标题",
+        tags: ["教程", "agent", "不存在推荐"]
+      },
+      page: fakePage(calls),
+      step: async (step) => {
+        calls.push(`step:${step}`);
+      }
+    });
+
+    expect(calls).toContain("fill:B站标题");
+    expect(calls).toContain("fill:B站标题\n#教程 #agent #不存在推荐");
+    expect(calls).toContain("click:locator:input[placeholder*=\"标签\"]");
+    expect(calls).toContain("fill:");
+    expect(calls).toContain("keyboard-press:Backspace");
+    expect(calls).toContain("eval:bilibili-recommended-tag-click:教程");
+    expect(calls).toContain("eval:bilibili-recommended-tag-click:agent");
+    expect(calls).toContain("eval:bilibili-recommended-tag-missing:不存在推荐");
+    expect(calls).toContain("keyboard-insert:不存在推荐");
+    expect(calls).toContain("keyboard-press:Space");
+    expect(calls.indexOf("fill:")).toBeLessThan(calls.indexOf("eval:bilibili-recommended-tag-click:教程"));
+    expect(calls.indexOf("eval:bilibili-recommended-tag-click:agent")).toBeLessThan(calls.indexOf("keyboard-insert:不存在推荐"));
+  });
+
   it("runs WeChat Channels cover selection immediately after video upload", async () => {
     const calls: string[] = [];
     const adapter = new TestableWechatPublishOrderAdapter(calls);
@@ -947,6 +976,17 @@ function fakePageInstance(
           targetText: "完成",
           targetTagName: "BUTTON"
         };
+      }
+      if (String(fn).includes("bilibili-recommended-tag-click")) {
+        const script = String(fn);
+        const matched = script.match(/const targetTag = "([^"]+)"/);
+        const tag = matched?.[1] ?? "";
+        if (["教程", "agent"].includes(tag)) {
+          calls.push(`eval:bilibili-recommended-tag-click:${tag}`);
+          return { clicked: true, tag };
+        }
+        calls.push(`eval:bilibili-recommended-tag-missing:${tag}`);
+        return { clicked: false, tag };
       }
       if (String(fn).includes("douyin-cover-card-click")) {
         calls.push(`eval:douyin-cover-card-click:${arg}`);
