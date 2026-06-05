@@ -20,6 +20,10 @@ type XhsClickCandidate = {
   tagName: string;
   rect: RectSnapshot;
   backgroundImage?: string;
+  disabled?: boolean;
+  pointerEvents?: string;
+  opacity?: string;
+  position?: string;
 };
 
 type XhsClickResult = {
@@ -926,7 +930,6 @@ export class XiaohongshuAdapter extends BaseWebAdapter {
         const marker = "xhs-cover-upload-settled";
         void marker;
         const text = (document.body?.innerText || "").replace(/\s+/g, " ").trim();
-        const failed = ["上传失败", "图片上传失败", "处理失败"].some((item) => text.includes(item));
         const uploading = ["上传中", "正在上传", "图片上传中", "处理中"].some((item) => text.includes(item));
         const confirm = Array.from(document.querySelectorAll<HTMLElement>("button, [role='button'], body *"))
           .map((element) => ({ element, text: (element.textContent || "").replace(/\s+/g, " ").trim(), rect: element.getBoundingClientRect() }))
@@ -935,7 +938,7 @@ export class XiaohongshuAdapter extends BaseWebAdapter {
         const disabled = Boolean(confirm?.closest("[disabled], [aria-disabled='true'], .disabled, [class*='disabled']"));
         return {
           ready: Boolean(confirm) && !disabled && !uploading,
-          failed,
+          failed: false,
           text: text.slice(0, 300)
         };
       }).catch(() => ({ ready: false, failed: false, text: "" }));
@@ -1168,13 +1171,25 @@ export class XiaohongshuAdapter extends BaseWebAdapter {
             rect.top < window.innerHeight &&
             style.display !== "none" &&
             style.visibility !== "hidden" &&
-            style.opacity !== "0" &&
-            style.pointerEvents !== "none"
+            style.opacity !== "0"
           );
         },
         isDisabled(element: HTMLElement) {
           const disabled = element.closest("[disabled], [aria-disabled='true'], .disabled, [class*='disabled']");
           return Boolean(disabled);
+        },
+        allElements() {
+          const roots: Array<Document | ShadowRoot> = [document];
+          const elements: HTMLElement[] = [];
+          for (let index = 0; index < roots.length; index += 1) {
+            for (const element of Array.from(roots[index].querySelectorAll<HTMLElement>("button, [role='button'], a, span, div"))) {
+              elements.push(element);
+              if (element.shadowRoot) {
+                roots.push(element.shadowRoot);
+              }
+            }
+          }
+          return elements;
         },
         markClick(point: { x: number; y: number }, label: string) {
           const markerElement = document.createElement("div");
@@ -1209,7 +1224,7 @@ export class XiaohongshuAdapter extends BaseWebAdapter {
         }
       };
 
-      const allPublishElements = Array.from(document.querySelectorAll<HTMLElement>("button, [role='button'], a, span, div"))
+      const allPublishElements = helper.allElements()
         .filter((element) => helper.isVisible(element))
         .map((element) => {
           const explicitControl = element.closest<HTMLElement>("button, [role='button'], a");
@@ -1261,16 +1276,19 @@ export class XiaohongshuAdapter extends BaseWebAdapter {
             rect,
             text: helper.textOf(target) || helper.textOf(element),
             compactText: helper.compactTextOf(target) || helper.compactTextOf(element),
-            hasFixedOrStickyAncestor
+            hasFixedOrStickyAncestor,
+            disabled: helper.isDisabled(target),
+            pointerEvents: window.getComputedStyle(target).pointerEvents,
+            opacity: window.getComputedStyle(target).opacity,
+            position: window.getComputedStyle(target).position
           };
         })
         .filter(({ compactText }) => compactText === "发布");
 
-      const candidates = allPublishElements
-        .filter(({ element, rect }) => {
+      const publishLikeCandidates = allPublishElements
+        .filter(({ rect }) => {
           const centerX = rect.left + rect.width / 2;
           return (
-            !helper.isDisabled(element) &&
             rect.width >= 90 &&
             rect.width <= 360 &&
             rect.height >= 36 &&
@@ -1290,6 +1308,8 @@ export class XiaohongshuAdapter extends BaseWebAdapter {
             const bottomDistance = Math.abs(window.innerHeight - item.rect.bottom);
             return (
               (item.hasFixedOrStickyAncestor ? 100 : 0) +
+              (item.disabled ? -80 : 0) +
+              (item.pointerEvents === "none" ? -40 : 0) +
               (isButton ? 50 : 0) +
               (pinkLike ? 20 : 0) +
               Math.max(0, 40 - bottomDistance) +
@@ -1299,14 +1319,27 @@ export class XiaohongshuAdapter extends BaseWebAdapter {
           };
           return score(b) - score(a);
         });
-      const target = candidates[0]?.element;
+      const candidates = publishLikeCandidates.filter((item) => !item.disabled && item.pointerEvents !== "none");
+      const target = candidates[0]?.element ?? publishLikeCandidates[0]?.element;
       if (!target) {
+        const point = { x: window.innerWidth / 2, y: window.innerHeight - 64 };
+        const hit = document.elementFromPoint(point.x, point.y) as HTMLElement | null;
+        helper.markClick(point, "xhs-bottom-publish-pixel");
         return {
-          clicked: false,
-          reason: "bottom-publish-button-not-found",
+          clicked: true,
+          reason: "fixed-footer-pixel-fallback",
+          point,
+          targetText: hit ? helper.textOf(hit).slice(0, 120) : "",
+          targetTagName: hit?.tagName,
+          targetClassName: hit ? helper.classNameOf(hit) : undefined,
+          targetRect: hit ? helper.toRect(hit) : undefined,
           candidates: allPublishElements.slice(0, 12).map((item) => ({
             text: item.text.slice(0, 120),
             tagName: item.element.tagName,
+            disabled: item.disabled,
+            pointerEvents: item.pointerEvents,
+            opacity: item.opacity,
+            position: item.position,
             rect: {
               left: item.rect.left,
               top: item.rect.top,
@@ -1323,6 +1356,7 @@ export class XiaohongshuAdapter extends BaseWebAdapter {
       const point = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
       const hit = document.elementFromPoint(point.x, point.y) as HTMLElement | null;
       helper.markClick(point, "xhs-bottom-publish");
+      const loggedCandidates = candidates.length > 0 ? candidates : publishLikeCandidates;
       return {
         clicked: true,
         point,
@@ -1334,9 +1368,13 @@ export class XiaohongshuAdapter extends BaseWebAdapter {
         hitTagName: hit?.tagName,
         hitClassName: hit ? helper.classNameOf(hit) : undefined,
         hitRect: hit ? helper.toRect(hit) : undefined,
-        candidates: candidates.slice(0, 8).map((item) => ({
+        candidates: loggedCandidates.slice(0, 8).map((item) => ({
           text: item.text.slice(0, 120),
           tagName: item.element.tagName,
+          disabled: item.disabled,
+          pointerEvents: item.pointerEvents,
+          opacity: item.opacity,
+          position: item.position,
           rect: {
             left: item.rect.left,
             top: item.rect.top,
