@@ -116,6 +116,8 @@ export class XiaohongshuAdapter extends BaseWebAdapter {
       throw new Error("小红书封面上传后未能点击确定");
     }
 
+    await page.waitForTimeout(5_000);
+
     await step("等待小红书封面效果评估通过");
     if (!(await this.waitForXhsCoverEffectPassed(page))) {
       throw new Error("小红书封面上传后未检测到“封面效果评估通过”");
