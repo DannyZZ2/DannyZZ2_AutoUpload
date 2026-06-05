@@ -4,7 +4,7 @@ import fastifyMultipart from "@fastify/multipart";
 import fastifyStatic from "@fastify/static";
 import Fastify from "fastify";
 import { apiHost, apiPort, ensureDataDirs, screenshotDir } from "./config";
-import { getTaskWithRuns, insertTask, listTasks } from "./db";
+import { deleteTask, getTaskWithRuns, insertTask, listTasks } from "./db";
 import { platformConfigs } from "./platformConfig";
 import { publisherRunner } from "./publisher/runner";
 import { assignUploadPath, isUploadField, requireSavedUploads, saveUpload, type SavedUploads } from "./uploads";
@@ -121,6 +121,14 @@ app.post<{ Params: { id: string } }>("/api/tasks/:id/run", async (request, reply
   } catch (error) {
     return reply.status(404).send({ error: errorMessage(error) });
   }
+});
+
+app.delete<{ Params: { id: string } }>("/api/tasks/:id", async (request, reply) => {
+  if (!deleteTask(request.params.id)) {
+    return reply.status(404).send({ error: "任务不存在" });
+  }
+
+  return reply.status(204).send();
 });
 
 app.post<{ Params: { platform: string } }>("/api/platforms/:platform/login", async (request, reply) => {

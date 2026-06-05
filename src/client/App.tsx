@@ -11,6 +11,7 @@ import {
   RefreshCw,
   Send,
   Tags,
+  Trash2,
   UploadCloud,
   XCircle
 } from "lucide-react";
@@ -24,7 +25,7 @@ type ApiTasks = {
   tasks: TaskWithRuns[];
 };
 
-const defaultPlatforms: Platform[] = ["douyin", "bilibili", "xiaohongshu", "wechat_channels", "weibo"];
+const defaultPlatforms: Platform[] = ["douyin", "bilibili", "xiaohongshu", "wechat_channels"];
 
 export function App() {
   const [platforms, setPlatforms] = useState<PlatformConfig[]>([]);
@@ -53,6 +54,9 @@ export function App() {
 
   const platformName = useMemo(() => {
     return Object.fromEntries(platforms.map((platform) => [platform.id, platform.name])) as Record<Platform, string>;
+  }, [platforms]);
+  const visiblePlatforms = useMemo(() => {
+    return platforms.filter((platform) => platform.id !== "weibo");
   }, [platforms]);
 
   async function submitTask(event: React.FormEvent<HTMLFormElement>) {
@@ -110,6 +114,18 @@ export function App() {
     }
   }
 
+  async function deletePublishTask(taskId: string) {
+    setMessage(undefined);
+    setError(undefined);
+    try {
+      await deleteJson(`/api/tasks/${taskId}`);
+      setTasks((current) => current.filter((task) => task.id !== taskId));
+      setMessage("任务已删除");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    }
+  }
+
   function togglePlatform(platform: Platform) {
     setSelectedPlatforms((current) => {
       if (current.includes(platform)) {
@@ -155,8 +171,8 @@ export function App() {
                 <input name="cover43" type="file" accept="image/png,image/jpeg" required />
               </label>
               <label className="field">
-                <span>16:9 封面（微博/B站）</span>
-                <input name="cover169" type="file" accept="image/png,image/jpeg" required={selectedPlatforms.includes("weibo") || selectedPlatforms.includes("bilibili")} />
+                <span>16:9 封面（B站）</span>
+                <input name="cover169" type="file" accept="image/png,image/jpeg" required={selectedPlatforms.includes("bilibili")} />
               </label>
             </div>
 
@@ -173,7 +189,7 @@ export function App() {
             <div className="platform-picker">
               <span>目标平台</span>
               <div className="platform-options">
-                {platforms.map((platform) => (
+                {visiblePlatforms.map((platform) => (
                   <button
                     className={selectedPlatforms.includes(platform.id) ? "platform-toggle active" : "platform-toggle"}
                     key={platform.id}
@@ -207,7 +223,7 @@ export function App() {
                 <h2>账号会话</h2>
               </div>
               <div className="login-list">
-                {platforms.map((platform) => (
+                {visiblePlatforms.map((platform) => (
                   <button className="session-row" key={platform.id} onClick={() => void openLogin(platform.id)} type="button">
                     <span>{platform.name}</span>
                     <LogIn size={16} />
@@ -257,9 +273,14 @@ export function App() {
                     <RunList runs={task.runs} platformName={platformName} />
                   </div>
 
-                  <button className="icon-button" onClick={() => void retryTask(task.id)} type="button" title="重跑任务">
-                    <Play size={17} />
-                  </button>
+                  <div className="task-actions">
+                    <button className="icon-button" onClick={() => void retryTask(task.id)} type="button" title="重跑任务">
+                      <Play size={17} />
+                    </button>
+                    <button className="icon-button danger" onClick={() => void deletePublishTask(task.id)} type="button" title="删除任务">
+                      <Trash2 size={17} />
+                    </button>
+                  </div>
                 </article>
               ))
             )}
@@ -326,6 +347,17 @@ async function postJson(url: string) {
     throw new Error(payload.error ?? "请求失败");
   }
   return payload;
+}
+
+async function deleteJson(url: string) {
+  const response = await fetch(url, { method: "DELETE" });
+  if (response.status === 204) {
+    return;
+  }
+  const payload = await response.json();
+  if (!response.ok) {
+    throw new Error(payload.error ?? "请求失败");
+  }
 }
 
 function parseTags(value: string) {

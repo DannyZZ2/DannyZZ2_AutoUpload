@@ -164,7 +164,7 @@ h3 {
 
 .platform-options {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 8px;
 }
 
@@ -228,6 +228,10 @@ h3 {
   height: 40px;
   background: var(--ink);
   color: #fff;
+}
+
+.icon-button.danger {
+  background: var(--red);
 }
 
 .side-stack {
@@ -345,6 +349,11 @@ h3 {
   background: var(--panel);
   padding: 16px;
   box-shadow: 0 10px 32px rgb(36 31 24 / 8%);
+}
+
+.task-actions {
+  display: grid;
+  gap: 8px;
 }
 
 .task-main {

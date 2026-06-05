@@ -130,6 +130,17 @@ export function getTaskWithRuns(taskId: string): TaskWithRuns {
   return { ...task, runs: listRuns(taskId) };
 }
 
+export function deleteTask(taskId: string) {
+  const task = getTask(taskId);
+  if (!task) {
+    return false;
+  }
+
+  db.prepare("DELETE FROM platform_runs WHERE taskId = ?").run(taskId);
+  db.prepare("DELETE FROM tasks WHERE id = ?").run(taskId);
+  return true;
+}
+
 export function updateTaskStatus(taskId: string, status: PublishTaskStatus) {
   db.prepare("UPDATE tasks SET status = ?, updatedAt = ? WHERE id = ?").run(
     status,
