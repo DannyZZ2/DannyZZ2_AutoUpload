@@ -146,9 +146,34 @@ export class BilibiliAdapter extends BaseWebAdapter {
           return text.includes("封面设置") || text.includes("设置封面");
         })
         .filter((element) => helper.isVisible(element))
-        .map((element) => ({ element, rect: element.getBoundingClientRect(), text: helper.textOf(element) }))
-        .filter((candidate) => candidate.rect.width > 40 && candidate.rect.height > 20)
-        .sort((a, b) => b.rect.width * b.rect.height - a.rect.width * a.rect.height);
+        .map((element) => ({
+          element,
+          rect: element.getBoundingClientRect(),
+          text: helper.textOf(element),
+          tagName: element.tagName
+        }))
+        .filter((candidate) => {
+          const rootTags = ["HTML", "BODY", "MICRO-APP", "MICRO-APP-BODY"];
+          const area = candidate.rect.width * candidate.rect.height;
+          return (
+            !rootTags.includes(candidate.tagName) &&
+            candidate.rect.width >= 30 &&
+            candidate.rect.height >= 18 &&
+            candidate.rect.width <= 420 &&
+            candidate.rect.height <= 260 &&
+            area <= 80_000 &&
+            candidate.text.length <= 80
+          );
+        })
+        .sort((a, b) => {
+          const score = (candidate) => {
+            const exact = candidate.text === "封面设置" || candidate.text === "设置封面" ? 0 : 1;
+            const shortText = candidate.text.length <= 12 ? 0 : 1;
+            const area = candidate.rect.width * candidate.rect.height;
+            return exact * 1_000_000 + shortText * 100_000 + area;
+          };
+          return score(a) - score(b);
+        });
 
       const candidate = candidates[0];
       if (!candidate) {
