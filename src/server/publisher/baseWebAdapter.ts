@@ -33,6 +33,12 @@ export abstract class BaseWebAdapter implements PlatformPublisherAdapter {
       await this.setTitleAndTags(context);
       await this.setContentDeclaration(context);
       await this.setCover(context);
+      if (!task.autoPublish) {
+        await step("已完成填写，等待手动发布");
+        return {
+          status: "ready_for_manual_publish"
+        } as const;
+      }
       await this.submitPublish(context);
       return {
         status: "published_immediately"

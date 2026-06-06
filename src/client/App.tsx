@@ -31,6 +31,7 @@ export function App() {
   const [platforms, setPlatforms] = useState<PlatformConfig[]>([]);
   const [tasks, setTasks] = useState<TaskWithRuns[]>([]);
   const [selectedPlatforms, setSelectedPlatforms] = useState<Platform[]>(defaultPlatforms);
+  const [autoPublish, setAutoPublish] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState<string>();
   const [error, setError] = useState<string>();
@@ -70,6 +71,7 @@ export function App() {
       const form = new FormData(formElement);
       form.set("platforms", JSON.stringify(selectedPlatforms));
       form.set("tags", JSON.stringify(parseTags(String(form.get("tags") ?? ""))));
+      form.set("autoPublish", String(autoPublish));
 
       const response = await fetch("/api/tasks", {
         method: "POST",
@@ -83,6 +85,7 @@ export function App() {
       setMessage("任务已创建，正在打开平台发布页");
       formElement.reset();
       setSelectedPlatforms(defaultPlatforms);
+      setAutoPublish(true);
       await load();
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
@@ -203,9 +206,22 @@ export function App() {
               </div>
             </div>
 
+            <div className="auto-publish-field">
+              <span>自动发布</span>
+              <div className="segmented-control" role="group" aria-label="是否自动发布">
+                <button className={autoPublish ? "active" : ""} onClick={() => setAutoPublish(true)} type="button">
+                  是
+                </button>
+                <button className={!autoPublish ? "active" : ""} onClick={() => setAutoPublish(false)} type="button">
+                  否
+                </button>
+              </div>
+              <small>{autoPublish ? "填写完成后自动点击发布" : "填写完成后停留页面，由用户手动点击发布"}</small>
+            </div>
+
             <button className="primary-button" disabled={submitting || selectedPlatforms.length === 0} type="submit">
               {submitting ? <Loader2 className="spin" size={18} /> : <UploadCloud size={18} />}
-              创建并执行
+              {autoPublish ? "创建并发布" : "创建并填写"}
             </button>
 
             {(message || error) && (
@@ -234,6 +250,7 @@ export function App() {
 
             <section className="metrics-band">
               <Metric icon={<Clock3 size={18} />} label="待处理" value={countByStatus(tasks, "draft") + countByStatus(tasks, "running")} />
+              <Metric icon={<Clock3 size={18} />} label="待手动" value={countByStatus(tasks, "ready_for_manual_publish")} />
               <Metric icon={<CheckCircle2 size={18} />} label="已发布" value={countByStatus(tasks, "published_immediately")} />
               <Metric icon={<XCircle size={18} />} label="失败" value={countByStatus(tasks, "failed")} />
             </section>
@@ -269,6 +286,7 @@ export function App() {
                         <Image size={15} />
                         抖音双封面
                       </span>
+                      <span>{task.autoPublish ? "自动发布" : "手动发布"}</span>
                     </div>
                     <RunList runs={task.runs} platformName={platformName} />
                   </div>
@@ -315,6 +333,7 @@ function StatusBadge({ status }: { status: TaskWithRuns["status"] }) {
   const labels: Record<TaskWithRuns["status"], string> = {
     draft: "待执行",
     running: "执行中",
+    ready_for_manual_publish: "待手动发布",
     published_immediately: "已立即发布",
     failed: "失败"
   };

@@ -6,6 +6,10 @@ import { PublisherAutomationError } from "./adapter";
 import { getAdapter } from "./registry";
 
 const runningTasks = new Set<string>();
+const completedStepLabel = {
+  published_immediately: "已立即发布",
+  ready_for_manual_publish: "待手动发布"
+} as const;
 
 export class PublisherRunner {
   private queue: Promise<unknown> = Promise.resolve();
@@ -46,7 +50,7 @@ export class PublisherRunner {
 
           updateRun(task.id, platform, {
             status: result.status,
-            currentStep: "已立即发布",
+            currentStep: completedStepLabel[result.status],
             screenshotPath: result.screenshotPath
           });
         } catch (error) {
@@ -63,7 +67,7 @@ export class PublisherRunner {
         }
       }
 
-      updateTaskStatus(task.id, hasFailure ? "failed" : "published_immediately");
+      updateTaskStatus(task.id, hasFailure ? "failed" : task.autoPublish ? "published_immediately" : "ready_for_manual_publish");
     } finally {
       runningTasks.delete(taskId);
     }

@@ -12,6 +12,7 @@ export type ParsedTaskFields = {
   title: string;
   tags: string[];
   platforms: Platform[];
+  autoPublish: boolean;
 };
 
 export type ImageRatio = "3:4" | "4:3" | "16:9";
@@ -31,8 +32,20 @@ export function parseTaskFields(fields: Record<string, unknown>): ParsedTaskFiel
 
   const tags = parseTags(fields.tags);
   const selectedPlatforms = parsePlatforms(fields.platforms);
+  const autoPublish = parseAutoPublish(fields.autoPublish);
 
-  return { title, tags, platforms: selectedPlatforms };
+  return { title, tags, platforms: selectedPlatforms, autoPublish };
+}
+
+export function parseAutoPublish(value: unknown): boolean {
+  if (value === undefined || value === null || value === "") {
+    return true;
+  }
+  if (typeof value === "boolean") {
+    return value;
+  }
+  const raw = String(value).trim().toLowerCase();
+  return !["false", "0", "no", "否", "不自动发布"].includes(raw);
 }
 
 export function parseTags(value: unknown): string[] {

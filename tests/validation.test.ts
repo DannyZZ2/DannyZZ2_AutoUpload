@@ -2,7 +2,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { validateImageFile, validateVideoFile, validateWeiboVideoFile, validateWeiboVideoMetadata } from "../src/server/validation";
+import { parseAutoPublish, validateImageFile, validateVideoFile, validateWeiboVideoFile, validateWeiboVideoMetadata } from "../src/server/validation";
 import { prepareWeiboVideoFile } from "../src/server/videoPrepare";
 
 describe("upload validation", () => {
@@ -74,6 +74,13 @@ describe("upload validation", () => {
         sizeBytes: 16 * 1024 * 1024 * 1024
       })
     ).toThrow(/15G/);
+  });
+
+  it("defaults to auto publish unless explicitly disabled", () => {
+    expect(parseAutoPublish(undefined)).toBe(true);
+    expect(parseAutoPublish("true")).toBe(true);
+    expect(parseAutoPublish("false")).toBe(false);
+    expect(parseAutoPublish("否")).toBe(false);
   });
 });
 

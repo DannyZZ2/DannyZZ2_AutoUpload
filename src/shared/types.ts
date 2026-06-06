@@ -11,12 +11,14 @@ export type Platform = (typeof platforms)[number];
 export type PublishTaskStatus =
   | "draft"
   | "running"
+  | "ready_for_manual_publish"
   | "published_immediately"
   | "failed";
 
 export type PlatformRunStatus =
   | "pending"
   | "running"
+  | "ready_for_manual_publish"
   | "published_immediately"
   | "failed";
 
@@ -29,6 +31,7 @@ export type PublishTask = {
   title: string;
   tags: string[];
   platforms: Platform[];
+  autoPublish: boolean;
   status: PublishTaskStatus;
   createdAt: string;
   updatedAt: string;

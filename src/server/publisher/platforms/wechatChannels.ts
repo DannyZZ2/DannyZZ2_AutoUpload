@@ -133,6 +133,12 @@ export class WechatChannelsAdapter extends BaseWebAdapter {
     await this.setCover(context);
     await this.setTitleAndTags(context);
     await this.setContentDeclaration(context);
+    if (!context.task.autoPublish) {
+      await context.step("已完成填写，等待手动发布");
+      return {
+        status: "ready_for_manual_publish"
+      } as const;
+    }
     await this.submitPublish(context);
     return {
       status: "published_immediately"

@@ -10,7 +10,7 @@ export type PublishContext = {
 };
 
 export type PublishResult = {
-  status: Extract<PlatformRunStatus, "published_immediately">;
+  status: Extract<PlatformRunStatus, "published_immediately" | "ready_for_manual_publish">;
   screenshotPath?: string;
 };
 

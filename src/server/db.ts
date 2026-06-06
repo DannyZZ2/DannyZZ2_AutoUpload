@@ -10,10 +10,11 @@ import type {
   TaskWithRuns
 } from "../shared/types";
 
-type TaskRow = Omit<PublishTask, "tags" | "platforms"> & {
+type TaskRow = Omit<PublishTask, "tags" | "platforms" | "autoPublish"> & {
   tags: string;
   platforms: string;
   cover169Path?: string | null;
+  autoPublish?: number | boolean | null;
 };
 
 type RunRow = Omit<PlatformRun, "platform"> & {
@@ -35,6 +36,7 @@ db.exec(`
     title TEXT NOT NULL,
     tags TEXT NOT NULL,
     platforms TEXT NOT NULL,
+    autoPublish INTEGER NOT NULL DEFAULT 1,
     scheduledAt TEXT NOT NULL,
     status TEXT NOT NULL,
     createdAt TEXT NOT NULL,
@@ -56,6 +58,7 @@ db.exec(`
 `);
 
 ensureColumn("tasks", "cover169Path", "TEXT");
+ensureColumn("tasks", "autoPublish", "INTEGER NOT NULL DEFAULT 1");
 
 export function insertTask(input: {
   id?: string;
@@ -66,6 +69,7 @@ export function insertTask(input: {
   title: string;
   tags: string[];
   platforms: Platform[];
+  autoPublish: boolean;
 }) {
   const now = new Date().toISOString();
   const task: PublishTask = {
@@ -77,6 +81,7 @@ export function insertTask(input: {
     title: input.title,
     tags: input.tags,
     platforms: input.platforms,
+    autoPublish: input.autoPublish,
     status: "draft",
     createdAt: now,
     updatedAt: now
@@ -85,8 +90,8 @@ export function insertTask(input: {
   db.prepare(`
     INSERT INTO tasks (
       id, videoPath, cover34Path, cover43Path, title, tags, platforms,
-      cover169Path, scheduledAt, status, createdAt, updatedAt
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      cover169Path, autoPublish, scheduledAt, status, createdAt, updatedAt
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     task.id,
     task.videoPath,
@@ -96,6 +101,7 @@ export function insertTask(input: {
     JSON.stringify(task.tags),
     JSON.stringify(task.platforms),
     task.cover169Path ?? null,
+    task.autoPublish ? 1 : 0,
     now,
     task.status,
     task.createdAt,
@@ -215,6 +221,7 @@ function mapTask(row: TaskRow): PublishTask {
   return {
     ...row,
     cover169Path: row.cover169Path ?? undefined,
+    autoPublish: row.autoPublish === undefined || row.autoPublish === null ? true : Boolean(row.autoPublish),
     tags: JSON.parse(row.tags) as string[],
     platforms: JSON.parse(row.platforms) as Platform[]
   };

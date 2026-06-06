@@ -627,6 +627,7 @@ function sampleTask(): PublishTask {
     title: "测试标题",
     tags: ["城市生活", "探店"],
     platforms: ["douyin"],
+    autoPublish: true,
     status: "draft",
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString()
