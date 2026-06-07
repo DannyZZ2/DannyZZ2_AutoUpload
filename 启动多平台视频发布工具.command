@@ -1,6 +1,21 @@
 #!/bin/zsh
 
-PROJECT_DIR="/Users/wuji/Desktop/软件开发/multi-platform-publisher"
+SCRIPT_PATH="${0:A}"
+SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_PATH")" && pwd)"
+
+if [[ -f "$SCRIPT_DIR/package.json" ]]; then
+  PROJECT_DIR="$SCRIPT_DIR"
+elif [[ -f "$HOME/Desktop/DannyZZ2_AutoUpload/package.json" ]]; then
+  PROJECT_DIR="$HOME/Desktop/DannyZZ2_AutoUpload"
+elif [[ -f "$HOME/Desktop/multi-platform-publisher/package.json" ]]; then
+  PROJECT_DIR="$HOME/Desktop/multi-platform-publisher"
+elif [[ -f "/Users/wuji/Desktop/软件开发/multi-platform-publisher/package.json" ]]; then
+  PROJECT_DIR="/Users/wuji/Desktop/软件开发/multi-platform-publisher"
+else
+  echo "未找到项目目录。请把此文件放在项目根目录，或将项目克隆到桌面的 DannyZZ2_AutoUpload 文件夹。"
+  read "unused?按回车退出..."
+  exit 1
+fi
 
 cd "$PROJECT_DIR" || exit 1
 
