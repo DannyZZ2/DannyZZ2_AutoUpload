@@ -4,6 +4,40 @@
 
 ## 运行
 
+### macOS 一键安装
+
+macOS 用户可以双击运行：
+
+```text
+安装多平台视频发布工具.command
+```
+
+脚本会自动检查 Git、Node.js 和 npm，安装依赖，并在桌面创建：
+
+```text
+启动多平台视频发布工具.command
+```
+
+如果对方只拿到了安装脚本，没有项目文件，脚本会自动从 GitHub 克隆到桌面的 `DannyZZ2_AutoUpload` 文件夹。
+
+### Windows 一键安装
+
+Windows 用户可以双击运行：
+
+```text
+安装多平台视频发布工具-Windows.bat
+```
+
+脚本会自动检查 Git、Node.js 和 npm，安装依赖，并在桌面创建：
+
+```text
+启动多平台视频发布工具-Windows.bat
+```
+
+如果对方只拿到了安装脚本，没有项目文件，脚本会自动从 GitHub 克隆到桌面的 `DannyZZ2_AutoUpload` 文件夹。
+
+### 手动运行
+
 ```bash
 npm install
 npm run dev
