@@ -1,23 +1,14 @@
 @echo off
 setlocal EnableExtensions DisableDelayedExpansion
 
-set "LOG_FILE=%USERPROFILE%\Desktop\DannyZZ2_AutoUpload_install.log"
-> "%LOG_FILE%" echo [%date% %time%] Start Windows installer
-
-call :main >> "%LOG_FILE%" 2>&1
+call :main
 set "INSTALL_EXIT=%ERRORLEVEL%"
 
 echo.
-echo ===== 安装日志 =====
-type "%LOG_FILE%"
-echo ===== 日志结束 =====
-echo.
-
 if "%INSTALL_EXIT%"=="0" (
   echo 安装完成。
 ) else (
   echo 安装失败，错误码：%INSTALL_EXIT%
-  echo 日志文件：%LOG_FILE%
 )
 echo.
 pause
@@ -29,12 +20,10 @@ setlocal EnableExtensions EnableDelayedExpansion
 
 set "REPO_URL=https://github.com/DannyZZ2/DannyZZ2_AutoUpload.git"
 set "INSTALL_DIR=%USERPROFILE%\Desktop\DannyZZ2_AutoUpload"
-set "LAUNCHER_NAME=启动多平台视频发布工具-Windows.bat"
 set "SCRIPT_DIR=%~dp0"
 set "PROJECT_DIR="
 
 echo 多平台视频发布工具 Windows 一键安装
-echo 日志文件：%LOG_FILE%
 echo.
 
 where git >nul 2>nul
@@ -104,20 +93,9 @@ if errorlevel 1 (
 call :install_browser_if_needed
 if errorlevel 1 exit /b 1
 
-if not exist "!PROJECT_DIR!\!LAUNCHER_NAME!" (
-  echo 未找到启动脚本：!PROJECT_DIR!\!LAUNCHER_NAME!
-  exit /b 1
-)
-
-copy /Y "!PROJECT_DIR!\!LAUNCHER_NAME!" "%USERPROFILE%\Desktop\!LAUNCHER_NAME!" >nul
-if errorlevel 1 (
-  echo 创建桌面启动快捷方式失败。
-  exit /b 1
-)
-
 echo.
-echo 桌面已创建快捷方式：%USERPROFILE%\Desktop\!LAUNCHER_NAME!
-echo 以后双击这个快捷方式即可启动工具。
+echo 项目已安装在：!PROJECT_DIR!
+echo 以后进入该文件夹，双击 启动多平台视频发布工具-Windows.bat 即可启动工具。
 exit /b 0
 
 :prepare_project

@@ -26,11 +26,13 @@ Windows 用户可以双击运行：
 安装多平台视频发布工具-Windows.bat
 ```
 
-脚本会自动检查 Git、Node.js 和 npm，安装依赖，并在桌面创建：
+脚本会自动检查 Git、Node.js 和 npm，安装依赖。
 
 ```text
 启动多平台视频发布工具-Windows.bat
 ```
+
+Windows 安装脚本不会在桌面额外创建启动工具。安装完成后，进入桌面的 `DannyZZ2_AutoUpload` 文件夹，双击其中的启动脚本即可启动。
 
 ### 手动运行
 
