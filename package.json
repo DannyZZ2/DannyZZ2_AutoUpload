@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "concurrently -n api,web -c cyan,green \"tsx watch src/server/index.ts\" \"vite --host 127.0.0.1\"",
+    "dev:open": "concurrently -n api,web -c cyan,green \"tsx watch src/server/index.ts\" \"vite --host 127.0.0.1 --open /\"",
     "dev:api": "tsx watch src/server/index.ts",
     "dev:web": "vite --host 127.0.0.1",
     "build": "tsc --noEmit && vite build",
